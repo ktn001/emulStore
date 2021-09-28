@@ -15,17 +15,13 @@
 	},
 	"licence" : "AGPL",
 	"author" : "Jeedom SAS",
-	"require" : "3.3.39",
+	"require" : "4.1.20",
 	"category" : "programming",
 	"hasDependency" : false,
 	"hasOwnDeamon" : false,
 	"maxDependancyInstallTime" : 0,
-	"changelog" : "https://jeedom.github.io/plugin-template/#language#/changelog",
-	"documentation" : "https://jeedom.github.io/plugin-template/#language#/",
-	"link" : {
-		"forum":"Lien vers le forum",
-		"video" : "Lien vers une video"
-	},
+	"changelog" : "https://ktn001.github.io/emulStore/#language#/changelog.html",
+	"documentation" : "https://ktn001.github.io/emulStore/#language#/index.html",
 	"language" : ["fr_FR"],
 	"compatibility" : ["miniplus","smart","rpi","docker","diy","mobile","v4"]
 }
