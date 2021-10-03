@@ -21,99 +21,100 @@ require_once __DIR__  . '/../../../../core/php/core.inc.php';
 
 class emulStore extends eqLogic {
     /*     * *************************Attributs****************************** */
-    
+
   /*
    * Permet de définir les possibilités de personnalisation du widget (en cas d'utilisation de la fonction 'toHtml' par exemple)
    * Tableau multidimensionnel - exemple: array('custom' => true, 'custom::layout' => false)
 	public static $_widgetPossibility = array();
    */
-    
+
     /*     * ***********************Methode static*************************** */
-
-    /*
-     * Fonction exécutée automatiquement toutes les minutes par Jeedom
-      public static function cron() {
-      }
-     */
-
-    /*
-     * Fonction exécutée automatiquement toutes les 5 minutes par Jeedom
-      public static function cron5() {
-      }
-     */
-
-    /*
-     * Fonction exécutée automatiquement toutes les 10 minutes par Jeedom
-      public static function cron10() {
-      }
-     */
-    
-    /*
-     * Fonction exécutée automatiquement toutes les 15 minutes par Jeedom
-      public static function cron15() {
-      }
-     */
-    
-    /*
-     * Fonction exécutée automatiquement toutes les 30 minutes par Jeedom
-      public static function cron30() {
-      }
-     */
-    
-    /*
-     * Fonction exécutée automatiquement toutes les heures par Jeedom
-      public static function cronHourly() {
-      }
-     */
-
-    /*
-     * Fonction exécutée automatiquement tous les jours par Jeedom
-      public static function cronDaily() {
-      }
-     */
-
 
 
     /*     * *********************Méthodes d'instance************************* */
-    
- // Fonction exécutée automatiquement avant la création de l'équipement 
+
+ // Fonction exécutée automatiquement avant la création de l'équipement
     public function preInsert() {
-        
+
     }
 
- // Fonction exécutée automatiquement après la création de l'équipement 
-    public function postInsert() {
-        
+ // Fonction exécutée automatiquement après la création de l'équipement
+	public function postInsert() {
+		// Création de la commande d'ouverture
+		$cmd = new cmd();
+		$cmd->setEqLogic_id($this->getId());
+		$cmd->setLogicalId("ouvre");
+		$cmd->setName("ouvrir");
+		$cmd->setType("action");
+		$cmd->setSubType("other");
+		$cmd->setOrder(0);
+		$cmd->save();
+
+		// Création de la commande de fermeture
+		$cmd = new cmd();
+		$cmd->setEqLogic_id($this->getId());
+		$cmd->setLogicalId("ferme");
+		$cmd->setName("fermer");
+		$cmd->setType("action");
+		$cmd->setSubType("other");
+		$cmd->setOrder(1);
+		$cmd->save();
+
+		// Création de l'info de position
+		$cmd = new emulStoreCmd();
+		$cmd->setEqLogic_id($this->getId());
+		$cmd->setLogicalId("position");
+		$cmd->setName("position");
+		$cmd->setType("info");
+		$cmd->setSubType("numeric");
+		$cmd->setOrder(2);
+		$cmd->setConfiguration("minValue",0);
+		$cmd->setConfiguration("maxValue",100);
+		$cmd->setUnite("%");
+		$cmd->save();
+
+		// Création de l'info de position
+		$cmd = new emulStoreCmd();
+		$cmd->setEqLogic_id($this->getId());
+		$cmd->setLogicalId("puissance");
+		$cmd->setName("puissance");
+		$cmd->setType("info");
+		$cmd->setSubType("numeric");
+		$cmd->setOrder(3);
+		$cmd->setConfiguration("minValue",0);
+		$cmd->setConfiguration("maxValue",10);
+		$cmd->setUnite("Kwh");
+		$cmd->save();
     }
 
- // Fonction exécutée automatiquement avant la mise à jour de l'équipement 
+ // Fonction exécutée automatiquement avant la mise à jour de l'équipement
     public function preUpdate() {
-        
+
     }
 
- // Fonction exécutée automatiquement après la mise à jour de l'équipement 
+ // Fonction exécutée automatiquement après la mise à jour de l'équipement
     public function postUpdate() {
-        
+
     }
 
- // Fonction exécutée automatiquement avant la sauvegarde (création ou mise à jour) de l'équipement 
+ // Fonction exécutée automatiquement avant la sauvegarde (création ou mise à jour) de l'équipement
     public function preSave() {
-        
+
     }
 
- // Fonction exécutée automatiquement après la sauvegarde (création ou mise à jour) de l'équipement 
+ // Fonction exécutée automatiquement après la sauvegarde (création ou mise à jour) de l'équipement
     public function postSave() {
-        
+
     }
 
- // Fonction exécutée automatiquement avant la suppression de l'équipement 
+ // Fonction exécutée automatiquement avant la suppression de l'équipement
     public function preRemove() {
-        
+
     }
 
- // Fonction exécutée automatiquement après la suppression de l'équipement 
+ // Fonction exécutée automatiquement après la suppression de l'équipement
     public function postRemove() {
-        
+
     }
 
     /*
@@ -136,15 +137,23 @@ class emulStore extends eqLogic {
      */
 
     /*     * **********************Getteur Setteur*************************** */
+    public function setActionEnCours($action){
+	    $this->setCache("actionEnCours", $action);
+    }
+
+    public function getActionEnCours(){
+	    return $this->getCache("actionEnCours");
+    }
+
 }
 
 class emulStoreCmd extends cmd {
     /*     * *************************Attributs****************************** */
-    
+
     /*
       public static $_widgetPossibility = array();
     */
-    
+
     /*     * ***********************Methode static*************************** */
 
 
@@ -157,10 +166,38 @@ class emulStoreCmd extends cmd {
       }
      */
 
-  // Exécution d'une commande  
-     public function execute($_options = array()) {
-        
-     }
+  // Exécution d'une commande
+	public function execute($_options = array()) {
+		if ($this->getType() == 'action'){
+			$emulatorId = $this->getEqLogic_id();
+			$emulator = EmulStore::byId($emulatorId);
+			$positionCmd = emulStoreCmd::byEqLogicIdAndLogicalId($emulatorId,'position');
+			$position = $positionCmd->execCmd();
+			if ($position == "") {
+				$position = 0;
+			}
+			log::add("emulStore","debug","Position: " . $position);
+			if ($this->getLogicalId() == "ouvre"){
+				if ($emulator->getActionEnCours() == $this->getLogicalId()){
+					$emulator->setActionEnCours("");
+				} elseif ($position < 100){
+					$emulator->setActionEnCours($this->getLogicalId());
+					$run = __DIR__ . "/../php/run.php -i " . $this->getId();
+					system::php($run . ' >> ' . log::getPathToLog('emulStore') . ' 2>&1 &');
+				}
+			}
+			if ($this->getLogicalId() == "ferme"){
+				if ($emulator->getActionEnCours() == $this->getLogicalId()){
+					$emulator->setActionEnCours("");
+				} elseif ($position > 0){
+					$emulator->setActionEnCours($this->getLogicalId());
+					$run = __DIR__ . "/../php/run.php -i " . $this->getId();
+					system::php($run . ' >> ' . log::getPathToLog('emulStore') . ' 2>&1 &');
+				}
+			}
+		}
+		return 1;
+	}
 
     /*     * **********************Getteur Setteur*************************** */
 }
