@@ -133,6 +133,12 @@ $eqLogics = eqLogic::byType($plugin->getId());
 								</div>
 							</div>
 							<div class="form-group">
+								<label class="col-sm-3 control-label">{{Temps de décollage (sec.)}}</label>
+								<div class="col-sm-7">
+									<input type="text" class="eqLogicAttr form-control" data-l1key="configuration" data-l2key="TempsDecollage" placeholder="{{secondes}}"/>
+								</div>
+							</div>
+							<div class="form-group">
 								<label class="col-sm-3 control-label">{{Puissance moteur durant l'ouverture}}</label>
 								<div class="col-sm-7">
 									<input type="text" class="eqLogicAttr form-control" data-l1key="configuration" data-l2key="PuissanceOuverture" placeholder="{{Kwh}}"/>

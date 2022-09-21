@@ -20,34 +20,24 @@
 require_once __DIR__  . '/../../../../core/php/core.inc.php';
 
 class emulStore extends eqLogic {
-    /*     * *************************Attributs****************************** */
-
-  /*
-   * Permet de définir les possibilités de personnalisation du widget (en cas d'utilisation de la fonction 'toHtml' par exemple)
-   * Tableau multidimensionnel - exemple: array('custom' => true, 'custom::layout' => false)
-	public static $_widgetPossibility = array();
-   */
-
-    /*     * ***********************Methode static*************************** */
-
 
     /*     * *********************Méthodes d'instance************************* */
 
- // Fonction exécutée automatiquement avant la création de l'équipement
-    public function preInsert() {
 
-    }
-
- // Fonction exécutée automatiquement après la création de l'équipement
+	// Fonction exécutée automatiquement après la création de l'équipement
 	public function postInsert() {
-		// Création de la commande d'ouverture
-		$cmd = new cmd();
+
+		// Création de l'info de position
+		$cmd = new emulStoreCmd();
 		$cmd->setEqLogic_id($this->getId());
-		$cmd->setLogicalId("ouvre");
-		$cmd->setName("ouvrir");
-		$cmd->setType("action");
-		$cmd->setSubType("other");
+		$cmd->setLogicalId("position");
+		$cmd->setName("position");
+		$cmd->setType("info");
+		$cmd->setSubType("numeric");
 		$cmd->setOrder(0);
+		$cmd->setConfiguration("minValue",0);
+		$cmd->setConfiguration("maxValue",100);
+		$cmd->setUnite("%");
 		$cmd->save();
 
 		// Création de la commande de fermeture
@@ -60,85 +50,52 @@ class emulStore extends eqLogic {
 		$cmd->setOrder(1);
 		$cmd->save();
 
-		// Création de l'info de position
-		$cmd = new emulStoreCmd();
+		// Création de la commande d'arret
+		$cmd = new cmd();
 		$cmd->setEqLogic_id($this->getId());
-		$cmd->setLogicalId("position");
-		$cmd->setName("position");
-		$cmd->setType("info");
-		$cmd->setSubType("numeric");
+		$cmd->setLogicalId("stop");
+		$cmd->setName("arrêt");
+		$cmd->setType("action");
+		$cmd->setSubType("other");
 		$cmd->setOrder(2);
-		$cmd->setConfiguration("minValue",0);
-		$cmd->setConfiguration("maxValue",100);
-		$cmd->setUnite("%");
 		$cmd->save();
 
-		// Création de l'info de position
+		// Création de la commande d'ouverture
+		$cmd = new cmd();
+		$cmd->setEqLogic_id($this->getId());
+		$cmd->setLogicalId("ouvre");
+		$cmd->setName("ouvrir");
+		$cmd->setType("action");
+		$cmd->setSubType("other");
+		$cmd->setOrder(3);
+		$cmd->save();
+
+		// Création de l'info de puissance
 		$cmd = new emulStoreCmd();
 		$cmd->setEqLogic_id($this->getId());
 		$cmd->setLogicalId("puissance");
 		$cmd->setName("puissance");
 		$cmd->setType("info");
 		$cmd->setSubType("numeric");
-		$cmd->setOrder(3);
+		$cmd->setOrder(4);
 		$cmd->setConfiguration("minValue",0);
 		$cmd->setConfiguration("maxValue",10);
 		$cmd->setUnite("Kwh");
 		$cmd->save();
     }
 
- // Fonction exécutée automatiquement avant la mise à jour de l'équipement
-    public function preUpdate() {
-
-    }
-
- // Fonction exécutée automatiquement après la mise à jour de l'équipement
-    public function postUpdate() {
-
-    }
-
- // Fonction exécutée automatiquement avant la sauvegarde (création ou mise à jour) de l'équipement
-    public function preSave() {
-
-    }
-
- // Fonction exécutée automatiquement après la sauvegarde (création ou mise à jour) de l'équipement
-    public function postSave() {
-
-    }
-
- // Fonction exécutée automatiquement avant la suppression de l'équipement
-    public function preRemove() {
-
-    }
-
- // Fonction exécutée automatiquement après la suppression de l'équipement
-    public function postRemove() {
-
-    }
-
-    /*
-     * Non obligatoire : permet de modifier l'affichage du widget (également utilisable par les commandes)
-      public function toHtml($_version = 'dashboard') {
-
-      }
-     */
-
-    /*
-     * Non obligatoire : permet de déclencher une action après modification de variable de configuration
-    public static function postConfig_<Variable>() {
-    }
-     */
-
-    /*
-     * Non obligatoire : permet de déclencher une action avant modification de variable de configuration
-    public static function preConfig_<Variable>() {
-    }
-     */
-
-    /*     * **********************Getteur Setteur*************************** */
     public function setActionEnCours($action){
 	    $this->setCache("actionEnCours", $action);
+	    $cmd =  $this->getCmd('info','puissance');
+	    if ($action == "ouvre") {
+		    $this->checkAndUpdateCmd($cmd,$this->getConfiguration('PuissanceOuverture'));
+	    } 
+	    if ($action == "ferme") {
+		    $this->checkAndUpdateCmd($cmd,$this->getConfiguration('PuissanceFermeture'));
+	    }
+	    if ($action == "") {
+		    $this->checkAndUpdateCmd($cmd,0);
+	    }
     }
 
     public function getActionEnCours(){
@@ -148,35 +105,18 @@ class emulStore extends eqLogic {
 }
 
 class emulStoreCmd extends cmd {
-    /*     * *************************Attributs****************************** */
 
-    /*
-      public static $_widgetPossibility = array();
-    */
-
-    /*     * ***********************Methode static*************************** */
-
-
-    /*     * *********************Methode d'instance************************* */
-
-    /*
-     * Non obligatoire permet de demander de ne pas supprimer les commandes même si elles ne sont pas dans la nouvelle configuration de l'équipement envoyé en JS
-      public function dontRemoveCmd() {
-      return true;
-      }
-     */
-
-  // Exécution d'une commande
+	// Exécution d'une commande
 	public function execute($_options = array()) {
 		if ($this->getType() == 'action'){
-			$emulatorId = $this->getEqLogic_id();
-			$emulator = EmulStore::byId($emulatorId);
-			$positionCmd = emulStoreCmd::byEqLogicIdAndLogicalId($emulatorId,'position');
+			$emulator = $this->getEqLogic();
+			$positionCmd = $emulator->getCmd('info','position');
 			$position = $positionCmd->execCmd();
 			if ($position == "") {
+				$emulator->checkAndUpdateCmd($positionCmd,0);
 				$position = 0;
 			}
-			log::add("emulStore","debug","Position: " . $position);
+			log::add("emulStore","info",__("Traitement de la commande ",__FILE__) . $this->getLogicalId());
 			if ($this->getLogicalId() == "ouvre"){
 				if ($emulator->getActionEnCours() == $this->getLogicalId()){
 					$emulator->setActionEnCours("");
@@ -195,11 +135,13 @@ class emulStoreCmd extends cmd {
 					system::php($run . ' >> ' . log::getPathToLog('emulStore') . ' 2>&1 &');
 				}
 			}
+			if ($this->getLogicalId() == "stop") {
+				$emulator->setActionEnCours("");
+			}
 		}
 		return 1;
 	}
 
-    /*     * **********************Getteur Setteur*************************** */
 }
 
 

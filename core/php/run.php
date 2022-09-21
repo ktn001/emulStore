@@ -59,24 +59,35 @@ if (! is_object($emulateur)){
 
 _log("info",__("execution de la commande ", __FILE__) . $cmd->getHumanName());
 
+
 /*
- * Calcul de l'heure de fin d'ouverture ou fermeture
+ * Initialisations
  */
-$cmdAction = $cmd->getLogicalId();
+$action = $cmd->getLogicalId();
 $positionCmd=cmd::byEqLogicIdAndLogicalId($emulateur->getId(),'position');
 $position=$positionCmd->execCmd();
-switch ($cmdAction){
+
+/*
+ * Temps de décollage en début d'ouverture
+ */
+if ($position == 0 && $action == 'ouvre') {
+	_log('debug',__('Attente du décollage...',__FILE__));
+	sleep((int) $emulateur->getConfiguration('TempsDecollage'));
+	_log('debug',__('Décollé',__FILE__));
+}
+
+switch ($action){
 case 'ouvre':
 	$cheminRestant = 100 - $position;
 	$tempsCourseComplete = (int)$emulateur->getConfiguration('TempsOuverture');
 	$timeToOpen = $cheminRestant / 100 * $tempsCourseComplete;
-	$heureFin = time() + $timeToOpen;
+	$heureFin = microtime(true) + $timeToOpen;
 	break;
 case 'ferme':
 	$cheminRestant = $position;
 	$tempsCourseComplete = (int)$emulateur->getConfiguration('TempsFermeture');
 	$timeToClose = $cheminRestant / 100 * $tempsCourseComplete;
-	$heureFin = time() + $timeToClose;
+	$heureFin = microtime(true) + $timeToClose;
 	break;
 default:
 	_log("error",sprintf(__("Action %s inconnue", __FILE__), $cmdAction));
@@ -86,13 +97,13 @@ default:
 _log("debug",__("Position de départ: ",__FILE__) . $position);
 _log("debug",sprintf(__("Heure de fin: %d (dans %d secondes)",__FILE__), $heureFin, $heureFin - time()));
 
-$dernierePosition=position;
+$dernierePosition=$position;
 while ($cheminRestant > 0){
 	if ($emulateur->getActionEnCours() != $cmd->getLogicalId()){
 		exit(0);
 	}
-	$tempsRestant = $heureFin - time();
-	switch ($cmdAction){
+	$tempsRestant = $heureFin - microtime(true);
+	switch ($action){
 	case 'ouvre':
 		$newPosition = round(100 - ($tempsRestant / $tempsCourseComplete * 100));
 		if ($newPosition > 100){
@@ -113,9 +124,7 @@ while ($cheminRestant > 0){
 		$emulateur->checkAndUpdateCmd($positionCmd,$newPosition);
 		$dernierePosition = $newPosition;
 	}
-	usleep(200000);
+	usleep(100000);
 }	
-if ($emulateur->getActionEnCours() != $cmd->getLogicalId()){
-	$emulateur->setActionEnCours("");
-}
+$emulateur->setActionEnCours("");
 exit (0);
