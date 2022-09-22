@@ -78,16 +78,18 @@ if ($position == 0 && $action == 'ouvre') {
 
 switch ($action){
 case 'ouvre':
+	$cheminRestant = 100 - $position;
 	$tempsCourseComplete = (int)$emulateur->getConfiguration('TempsOuverture');
 	$timeToOpen = $cheminRestant / 100 * $tempsCourseComplete;
 	$heureFin = microtime(true) + $timeToOpen;
-	$timeForOnePerCent = $tempsCourseComplete / 10000;
+	$tempsDeCicle = $tempsCourseComplete * 10000 * 0.8;
 	break;
 case 'ferme':
+	$cheminRestant = $position;
 	$tempsCourseComplete = (int)$emulateur->getConfiguration('TempsFermeture');
 	$timeToClose = $cheminRestant / 100 * $tempsCourseComplete;
 	$heureFin = microtime(true) + $timeToClose;
-	$timeForOnePerCent = $tempsCourseComplete / 100000000;
+	$tempsDeCicle = $tempsCourseComplete * 10000 * 0.8;
 	break;
 default:
 	_log("error",sprintf(__("Action %s inconnue", __FILE__), $cmdAction));
@@ -100,7 +102,7 @@ _log("debug",sprintf(__("Heure de fin: %d (dans %d secondes)",__FILE__), $heureF
 $dernierePosition=$position;
 $finDeCourse = false;
 while (! $finDeCourse) {
-	if ($emulateur->getActionEnCours() != $action()){
+	if ($emulateur->getActionEnCours() != $action){
 		exit(0);
 	}
 	$tempsRestant = $heureFin - microtime(true);
@@ -111,7 +113,7 @@ while (! $finDeCourse) {
 			$newPosition = 100;
 		}
 		if ($newPosition == 100) {
-			$findeCourse = true;
+			$finDeCourse = true;
 		}
 		break;
 	case 'ferme':
@@ -120,7 +122,7 @@ while (! $finDeCourse) {
 			$newPosition = 0;
 		};
 		if ($newPosition == 0) {
-			$findeCourse = true;
+			$finDeCourse = true;
 		}break;
 	}
 	_log("debug",__("Nouvelle position: ",__FILE__) . $newPosition);
@@ -128,7 +130,7 @@ while (! $finDeCourse) {
 		$emulateur->checkAndUpdateCmd($positionCmd,$newPosition);
 		$dernierePosition = $newPosition;
 	}
-	usleep($timeForOnePerCent);
+	usleep($tempsDeCicle);
 }	
 $emulateur->setActionEnCours("");
 exit (0);
