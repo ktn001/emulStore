@@ -100,7 +100,7 @@ _log("debug",sprintf(__("Heure de fin: %d (dans %d secondes)",__FILE__), $heureF
 $dernierePosition=$position;
 $finDeCourse = false;
 while (! $finDeCourse) {
-	if ($emulateur->getActionEnCours() != $cmd->getLogicalId()){
+	if ($emulateur->getActionEnCours() != $action()){
 		exit(0);
 	}
 	$tempsRestant = $heureFin - microtime(true);
