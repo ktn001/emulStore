@@ -78,16 +78,16 @@ if ($position == 0 && $action == 'ouvre') {
 
 switch ($action){
 case 'ouvre':
-	$cheminRestant = 100 - $position;
 	$tempsCourseComplete = (int)$emulateur->getConfiguration('TempsOuverture');
 	$timeToOpen = $cheminRestant / 100 * $tempsCourseComplete;
 	$heureFin = microtime(true) + $timeToOpen;
+	$timeForOnePerCent = $tempsCourseComplete / 10000;
 	break;
 case 'ferme':
-	$cheminRestant = $position;
 	$tempsCourseComplete = (int)$emulateur->getConfiguration('TempsFermeture');
 	$timeToClose = $cheminRestant / 100 * $tempsCourseComplete;
 	$heureFin = microtime(true) + $timeToClose;
+	$timeForOnePerCent = $tempsCourseComplete / 100000000;
 	break;
 default:
 	_log("error",sprintf(__("Action %s inconnue", __FILE__), $cmdAction));
@@ -98,7 +98,8 @@ _log("debug",__("Position de départ: ",__FILE__) . $position);
 _log("debug",sprintf(__("Heure de fin: %d (dans %d secondes)",__FILE__), $heureFin, $heureFin - time()));
 
 $dernierePosition=$position;
-while ($cheminRestant > 0){
+$finDeCourse = false;
+while (! $finDeCourse) {
 	if ($emulateur->getActionEnCours() != $cmd->getLogicalId()){
 		exit(0);
 	}
@@ -106,25 +107,28 @@ while ($cheminRestant > 0){
 	switch ($action){
 	case 'ouvre':
 		$newPosition = round(100 - ($tempsRestant / $tempsCourseComplete * 100));
-		if ($newPosition > 100){
+		if ($newPosition > 100) {
 			$newPosition = 100;
 		}
-		$cheminRestant = 100 - $newPosition;
+		if ($newPosition == 100) {
+			$findeCourse = true;
+		}
 		break;
 	case 'ferme':
 		$newPosition = round($tempsRestant / $tempsCourseComplete * 100);
-		if ($newPosition < 0){
+		if ($newPosition < 0) {
 			$newPosition = 0;
-		}
-		$cheminRestant = $newPosition;
-		break;
+		};
+		if ($newPosition == 0) {
+			$findeCourse = true;
+		}break;
 	}
 	_log("debug",__("Nouvelle position: ",__FILE__) . $newPosition);
 	if ($newPosition != $dernierePosition) {
 		$emulateur->checkAndUpdateCmd($positionCmd,$newPosition);
 		$dernierePosition = $newPosition;
 	}
-	usleep(100000);
+	usleep($timeForOnePerCent);
 }	
 $emulateur->setActionEnCours("");
 exit (0);
