@@ -11,8 +11,8 @@
 	"hasDependency" : false,
 	"hasOwnDeamon" : false,
 	"maxDependancyInstallTime" : 0,
-	"changelog" : "https://ktn001.github.io/emulStore/#language#/changelog.html",
-	"documentation" : "https://ktn001.github.io/emulStore/#language#/index.html",
+	"changelog" : "https://ktn001.github.io/#language#/emulStore/changelog.html",
+	"documentation" : "https://ktn001.github.io/#language#/emulStore/index.html",
 	"language" : ["fr_FR"],
 	"compatibility" : ["miniplus","smart","rpi","docker","diy","mobile","v4"]
 }
